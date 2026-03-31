@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+unformatted=$(gofmt -l .)
+if [ -n "$unformatted" ]; then
+  echo "The following files are not formatted (run script/format to fix):"
+  echo "$unformatted"
+  exit 1
+fi
+
+go vet ./...
+
+if ! command -v staticcheck &>/dev/null; then
+  echo "staticcheck not found — installing..."
+  go install honnef.co/go/tools/cmd/staticcheck@latest
+fi
+
+staticcheck ./...
