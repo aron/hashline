@@ -187,6 +187,14 @@ func cmdEdit(args []string) {
 		return
 	}
 
+	// Preserve original file permissions (e.g. executable bit)
+	fi, err := os.Stat(path)
+	if err != nil {
+		writeJSON(EditError{OK: false, Error: "io", Message: fmt.Sprintf("cannot stat %s: %v", path, err)})
+		return
+	}
+	origMode := fi.Mode().Perm()
+
 	// Split into lines preserving the original content (no trailing newline strip)
 	content := string(data)
 	fileLines := strings.Split(content, "\n")
@@ -206,7 +214,7 @@ func cmdEdit(args []string) {
 	// Write result atomically: temp file in same directory, then rename
 	newContent := strings.Join(fileLines, "\n")
 	tmpPath := path + ".hashline-tmp"
-	if err := os.WriteFile(tmpPath, []byte(newContent), 0644); err != nil {
+	if err := os.WriteFile(tmpPath, []byte(newContent), origMode); err != nil {
 		writeJSON(EditError{
 			OK:      false,
 			Error:   "io",

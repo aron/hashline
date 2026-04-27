@@ -429,6 +429,31 @@ func TestEditBoundaryDuplicationWarning(t *testing.T) {
 	}
 }
 
+func TestEditPreservesFilePermissions(t *testing.T) {
+	f := writeTempFile(t, "#!/bin/sh\necho hello\n")
+	// Make the file executable
+	if err := os.Chmod(f, 0755); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+
+	tags := extractTags(captureRead(t, f, nil))
+	req := EditRequest{
+		Edits: []RawEdit{{Op: OpReplaceLine, Pos: tags[1], Lines: []string{"echo goodbye"}}},
+	}
+	res := runEdit(t, f, req)
+	if !res.OK {
+		t.Fatalf("edit failed: %s", editErrMsg(f, req))
+	}
+
+	fi, err := os.Stat(f)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if fi.Mode().Perm() != 0755 {
+		t.Errorf("expected permissions 0755, got %04o", fi.Mode().Perm())
+	}
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────────────────
